@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SHL Assessment Recommendation System
 
 An intelligent recommendation system that suggests relevant SHL assessments based on job descriptions or natural language queries.
@@ -99,3 +100,6 @@ print(results)
 ## License
 
 MIT License 
+=======
+# SHL-assignment-recommendation
+>>>>>>> eba39c7888f705c68d3482550053f761d9cadad4
