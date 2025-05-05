@@ -1,0 +1,37 @@
+[
+    {
+        "query": "I am hiring for Java developers who can also collaborate effectively with my business teams. Looking for an assessment(s) that can be completed in 40 minutes.",
+        "relevant_assessments": [
+            "https://www.shl.com/solutions/products/productcatalog/view/automata-fix-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/core-java-entry-level-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/java-8-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/core-java-advanced-level-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/agile-software-development/",
+            "https://www.shl.com/solutions/products/productcatalog/view/technology-professional-8-0-jobfocused-assessment/",
+            "https://www.shl.com/solutions/products/productcatalog/view/computer-science-new/"
+        ]
+    },
+    {
+        "query": "I want to hire new graduates for a sales role in my company, the budget is for about an hour for each test. Give me some options",
+        "relevant_assessments": [
+            "https://www.shl.com/solutions/products/productcatalog/view/entry-level-sales-7-1/",
+            "https://www.shl.com/solutions/products/productcatalog/view/entry-level-sales-sift-out-7-1/",
+            "https://www.shl.com/solutions/products/productcatalog/view/entry-level-sales-solution/",
+            "https://www.shl.com/solutions/products/productcatalog/view/sales-representative-solution/",
+            "https://www.shl.com/solutions/products/productcatalog/view/sales-support-specialist-solution/",
+            "https://www.shl.com/solutions/products/productcatalog/view/technical-sales-associate-solution/",
+            "https://www.shl.com/solutions/products/productcatalog/view/svar-spoken-english-indian-accentnew/",
+            "https://www.shl.com/solutions/products/productcatalog/view/sales-and-service-phone-solution/",
+            "https://www.shl.com/solutions/products/productcatalog/view/sales-and-service-phone-simulation/",
+            "https://www.shl.com/solutions/products/productcatalog/view/english-comprehension-new/"
+        ]
+    },
+    {
+        "query": "I am looking for a COO for my company in China and I want to see if they are culturally a right fit for our company. Suggest me an assessment that they can complete in about an hour",
+        "relevant_assessments": [
+            "https://www.shl.com/solutions/products/productcatalog/view/motivation-questionnaire-mqm5/",
+            "https://www.shl.com/solutions/products/productcatalog/view/global-skills-assessment/",
+            "https://www.shl.com/solutions/products/productcatalog/view/graduate-8-0-job-focusedassessment-4228/"
+        ]
+    }
+] 
