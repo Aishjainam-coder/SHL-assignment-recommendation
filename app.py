@@ -43,7 +43,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- SHLRecommender class (from recommender.py) ---
+# --- SHLRecommender class (with debug prints) ---
 class SHLRecommender:
     def __init__(self, data_path: str = "data/shl_assessments.json"):
         self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
@@ -54,8 +54,10 @@ class SHLRecommender:
         try:
             with open(data_path, 'r', encoding='utf-8') as f:
                 self.assessments = json.load(f)
-        except FileNotFoundError:
-            st.error(f"Data file {data_path} not found. Using empty list.")
+            print(f"Loaded {len(self.assessments)} assessments from {data_path}")
+        except Exception as e:
+            print(f"Error loading data: {e}")
+            st.error(f"Data file {data_path} not found or invalid. Using empty list.")
             self.assessments = []
 
     def prepare_embeddings(self):
@@ -96,6 +98,7 @@ class SHLRecommender:
                 "duration": assessment['duration'],
                 "test_type": assessment['test_type']
             })
+        print(f"Query: {query} | Results found: {len(results)}")
         return results
 
 # --- End SHLRecommender class ---
@@ -146,6 +149,7 @@ def main():
         with st.spinner("🔎 Getting recommendations..."):
             recommender = get_recommender()
             recommendations = recommender.recommend(query, max_duration if max_duration > 0 else None)
+            print(f"Recommendations returned to UI: {len(recommendations)}")
             st.markdown("---")
             if recommendations:
                 st.success(f"Found {len(recommendations)} recommendations:")
