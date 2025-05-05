@@ -1,7 +1,11 @@
 import streamlit as st
-import requests
 import pandas as pd
-from typing import List, Dict
+from typing import List, Dict, Optional
+import numpy as np
+import json
+import os
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Set Streamlit page config for better appearance
 st.set_page_config(page_title="SHL Assessment Recommender", page_icon="📝", layout="centered")
@@ -39,21 +43,67 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# API configuration
-API_URL = "http://localhost:8000"  # Change this to your deployed API URL
+# --- SHLRecommender class (from recommender.py) ---
+class SHLRecommender:
+    def __init__(self, data_path: str = "data/shl_assessments.json"):
+        self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        self.load_data(data_path)
+        self.prepare_embeddings()
 
-def get_recommendations(query: str, max_duration: int = None) -> List[Dict]:
-    """Get recommendations from the API"""
-    try:
-        response = requests.post(
-            f"{API_URL}/recommend",
-            json={"query": query, "max_duration": max_duration}
-        )
-        response.raise_for_status()
-        return response.json()["recommendations"]
-    except Exception as e:
-        st.error(f"Error getting recommendations: {str(e)}")
-        return []
+    def load_data(self, data_path: str):
+        try:
+            with open(data_path, 'r', encoding='utf-8') as f:
+                self.assessments = json.load(f)
+        except FileNotFoundError:
+            st.error(f"Data file {data_path} not found. Using empty list.")
+            self.assessments = []
+
+    def prepare_embeddings(self):
+        assessment_texts = [
+            f"{assess['name']} {assess['test_type']} {assess['duration']}"
+            for assess in self.assessments
+        ]
+        self.embeddings = self.model.encode(assessment_texts)
+
+    def extract_duration(self, text: str) -> Optional[int]:
+        import re
+        duration_pattern = r'(\d+)\s*(?:min|minute|mins|minutes)'
+        match = re.search(duration_pattern, text.lower())
+        if match:
+            return int(match.group(1))
+        return None
+
+    def recommend(self, query: str, max_duration: Optional[int] = None, max_results: int = 10, similarity_threshold: float = 0.5) -> List[Dict]:
+        query_embedding = self.model.encode(query)
+        similarities = cosine_similarity([query_embedding], self.embeddings)[0]
+        top_indices = np.argsort(similarities)[::-1]
+        results = []
+        for idx in top_indices:
+            if len(results) >= max_results:
+                break
+            if similarities[idx] < similarity_threshold:
+                continue
+            assessment = self.assessments[idx]
+            if max_duration:
+                duration = self.extract_duration(assessment['duration'])
+                if duration and duration > max_duration:
+                    continue
+            results.append({
+                "assessment_name": assessment['name'],
+                "assessment_url": assessment['url'],
+                "remote_testing_support": assessment['remote_testing_support'],
+                "adaptive_irt_support": assessment['adaptive_irt_support'],
+                "duration": assessment['duration'],
+                "test_type": assessment['test_type']
+            })
+        return results
+
+# --- End SHLRecommender class ---
+
+# Cache the recommender to avoid reloading on every rerun
+@st.cache_resource(show_spinner=True)
+def get_recommender():
+    return SHLRecommender()
 
 def main():
     st.sidebar.image("https://www.shl.com/wp-content/themes/shl/images/logo.svg", width=180)
@@ -76,7 +126,6 @@ def main():
     </p>
     """, unsafe_allow_html=True)
 
-    # Input form in a card-like container
     with st.form("recommendation_form"):
         col1, col2 = st.columns([3, 1])
         with col1:
@@ -95,7 +144,8 @@ def main():
 
     if submit and query:
         with st.spinner("🔎 Getting recommendations..."):
-            recommendations = get_recommendations(query, max_duration if max_duration > 0 else None)
+            recommender = get_recommender()
+            recommendations = recommender.recommend(query, max_duration if max_duration > 0 else None)
             st.markdown("---")
             if recommendations:
                 st.success(f"Found {len(recommendations)} recommendations:")
