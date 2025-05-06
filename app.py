@@ -111,36 +111,63 @@ class SHLRecommender:
             return int(match.group(1))
         return None
 
-    def recommend(self, query: str, max_duration: Optional[int] = None, max_results: int = 10, similarity_threshold: float = 0.5) -> List[Dict]:
+    def recommend(
+        self, 
+        query: str, 
+        max_duration: Optional[int] = None, 
+        max_results: int = 10, 
+        similarity_threshold: float = 0.1  # Lowered threshold for better matching
+    ) -> List[Dict]:
         try:
             if self.embeddings is None or len(self.embeddings) == 0:
                 logger.error("No embeddings available for recommendation")
                 return []
+            
+            # Preprocess query
+            query = query.lower().strip()
+            
+            # Get query embedding
             query_embedding = self.model.encode(query)
+            
+            # Calculate similarities
             similarities = cosine_similarity([query_embedding], self.embeddings)[0]
+            
+            # Get top indices
             top_indices = np.argsort(similarities)[::-1]
+            
+            # Debug logging
+            logger.info(f"Query: {query}")
+            logger.info(f"Top 5 similarities: {similarities[top_indices[:5]]}")
+            
             results = []
             
             for idx in top_indices:
                 if len(results) >= max_results:
                     break
-                if similarities[idx] < similarity_threshold:
-                    continue
+                    
                 assessment = self.assessments[idx]
+                
+                # Check duration if specified
                 if max_duration:
                     duration = self.extract_duration(assessment['duration'])
                     if duration and duration > max_duration:
                         continue
-                results.append({
-                    "assessment_name": assessment['name'],
-                    "assessment_url": assessment['url'],
-                    "remote_testing_support": assessment['remote_testing_support'],
-                    "adaptive_irt_support": assessment['adaptive_irt_support'],
-                    "duration": assessment['duration'],
-                    "test_type": assessment['test_type']
-                })
-            logger.info(f"Query: {query} | Results found: {len(results)}")
+                
+                # Add to results if similarity meets threshold
+                if similarities[idx] >= similarity_threshold:
+                    results.append({
+                        "assessment_name": assessment['name'],
+                        "assessment_url": assessment['url'],
+                        "remote_testing_support": assessment['remote_testing_support'],
+                        "adaptive_irt_support": assessment['adaptive_irt_support'],
+                        "duration": assessment['duration'],
+                        "test_type": assessment['test_type'],
+                        "similarity_score": float(similarities[idx])  # Add similarity score for debugging
+                    })
+            
+            logger.info(f"Results found: {len(results)}")
             return results
+            
         except Exception as e:
             logger.error(f"Error in recommendation: {str(e)}")
             st.error(f"Error getting recommendations: {str(e)}")
@@ -228,26 +255,41 @@ def main():
                     st.error("Failed to initialize the recommender. Please try again later.")
                     return
                     
-                recommendations = recommender.recommend(query, max_duration if max_duration > 0 else None)
-                logger.info(f"Query: {query} | Results found: {len(recommendations)}")
+                recommendations = recommender.recommend(
+                    query, 
+                    max_duration if max_duration > 0 else None
+                )
                 
                 st.markdown("---")
                 if recommendations:
                     st.success(f"Found {len(recommendations)} recommendations:")
-                    st.dataframe(pd.DataFrame(recommendations), use_container_width=True)
-                    with st.expander("Show details for each recommendation"):
-                        for rec in recommendations:
-                            st.markdown(f"<b>Assessment Name:</b> {rec.get('assessment_name', '')}", unsafe_allow_html=True)
-                            st.markdown(f"<a href='{rec.get('assessment_url', '')}' target='_blank'>Assessment URL</a>", unsafe_allow_html=True)
-                            st.markdown(f"Remote Testing Support: <b>{rec.get('remote_testing_support', '')}</b>", unsafe_allow_html=True)
-                            st.markdown(f"Adaptive IRT Support: <b>{rec.get('adaptive_irt_support', '')}</b>", unsafe_allow_html=True)
-                            duration = rec.get('duration', '')
-                            if duration and len(duration) < 50 and '<' not in duration and 'function' not in duration:
-                                st.markdown(f"Duration: <b>{duration}</b>", unsafe_allow_html=True)
-                            st.markdown(f"Test Type: <b>{rec.get('test_type', '')}</b>", unsafe_allow_html=True)
-                            st.markdown('<hr style="margin: 0.5em 0;">', unsafe_allow_html=True)
+                    
+                    # Create a DataFrame with sorted recommendations
+                    df = pd.DataFrame(recommendations)
+                    df = df.sort_values('similarity_score', ascending=False)
+                    
+                    # Display the DataFrame
+                    st.dataframe(df, use_container_width=True)
+                    
+                    # Show detailed view
+                    with st.expander("Show detailed recommendations"):
+                        for idx, rec in enumerate(recommendations, 1):
+                            st.markdown(f"### Recommendation {idx}")
+                            st.markdown(f"**Assessment Name:** {rec['assessment_name']}")
+                            st.markdown(f"**Similarity Score:** {rec['similarity_score']:.3f}")
+                            st.markdown(f"**Test Type:** {rec['test_type']}")
+                            st.markdown(f"**Duration:** {rec['duration']}")
+                            st.markdown(f"**Remote Testing Support:** {rec['remote_testing_support']}")
+                            st.markdown(f"**Adaptive IRT Support:** {rec['adaptive_irt_support']}")
+                            st.markdown(f"[Assessment URL]({rec['assessment_url']})")
+                            st.markdown("---")
                 else:
-                    st.warning("No recommendations found. Try adjusting your query or duration limit.")
+                    st.warning("""
+                    No recommendations found. Try:
+                    1. Using more specific job requirements
+                    2. Increasing the maximum duration
+                    3. Using different keywords
+                    """)
             except Exception as e:
                 logger.error(f"Error getting recommendations: {str(e)}")
                 st.error(f"An error occurred while getting recommendations: {str(e)}")
