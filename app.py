@@ -210,6 +210,15 @@ def get_recommender():
         return None
     return SHLRecommender(data_path)
 
+def clean_duration(duration):
+    # Only allow numbers and the word 'minute'
+    import re
+    match = re.search(r'(\\d+).*min', str(duration).lower())
+    if match:
+        return f"{match.group(1)} minutes"
+    # fallback if not found
+    return "N/A"
+
 def main():
     st.sidebar.image("https://www.shl.com/wp-content/themes/shl/images/logo.svg", width=180)
     st.sidebar.title("About")
@@ -278,7 +287,8 @@ def main():
                             st.markdown(f"**Assessment Name:** {rec['assessment_name']}")
                             st.markdown(f"**Similarity Score:** {rec['similarity_score']:.3f}")
                             st.markdown(f"**Test Type:** {rec['test_type']}")
-                            st.markdown(f"**Duration:** {rec['duration']}")
+                            duration = clean_duration(rec.get('duration', ''))
+                            st.markdown(f"**Duration:** {duration}")
                             st.markdown(f"**Remote Testing Support:** {rec['remote_testing_support']}")
                             st.markdown(f"**Adaptive IRT Support:** {rec['adaptive_irt_support']}")
                             st.markdown(f"[Assessment URL]({rec['assessment_url']})")
