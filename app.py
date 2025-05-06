@@ -53,7 +53,7 @@ class SHLRecommender:
     def __init__(self, data_path: str = "data/shl_assessments.json"):
         try:
             logger.info("Initializing SHLRecommender...")
-            self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+            self.model = SentenceTransformer('./models/all-MiniLM-L6-v2')
             logger.info("Model loaded successfully")
             self.load_data(data_path)
             self.prepare_embeddings()
