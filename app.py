@@ -7,6 +7,8 @@ import os
 import logging
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from fastapi import FastAPI, Query
+from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -308,6 +310,32 @@ def main():
             except Exception as e:
                 logger.error(f"Error getting recommendations: {str(e)}")
                 st.error(f"An error occurred while getting recommendations: {str(e)}")
+
+app = FastAPI()
+
+class RecommendationRequest(BaseModel):
+    query: str
+    max_duration: Optional[int] = None
+
+class Assessment(BaseModel):
+    assessment_name: str
+    assessment_url: str
+    remote_testing_support: str
+    adaptive_irt_support: str
+    duration: str
+    test_type: str
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+@app.post("/recommend", response_model=List[Assessment])
+def recommend(request: RecommendationRequest):
+    # Call your SHLRecommender here and return the results
+    # Example:
+    # results = recommender.recommend(request.query, request.max_duration)
+    # return results
+    pass
 
 if __name__ == "__main__":
     main() 
