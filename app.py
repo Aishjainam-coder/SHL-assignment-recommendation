@@ -337,5 +337,20 @@ def recommend(request: RecommendationRequest):
     # return results
     pass
 
+def recall_at_k(recommended, relevant, k):
+    recommended_k = recommended[:k]
+    return len(set(recommended_k) & set(relevant)) / len(relevant)
+
+def average_precision_at_k(recommended, relevant, k):
+    score = 0.0
+    num_hits = 0.0
+    for i, rec in enumerate(recommended[:k]):
+        if rec in relevant:
+            num_hits += 1
+            score += num_hits / (i + 1)
+    return score / min(len(relevant), k)
+
+# Loop over test queries, collect metrics, and average
+
 if __name__ == "__main__":
     main() 
