@@ -53,8 +53,13 @@ class SHLRecommender:
     def __init__(self, data_path: str = "data/shl_assessments.json"):
         try:
             logger.info("Initializing SHLRecommender...")
-            self.model = SentenceTransformer('./models/all-MiniLM-L6-v2')
-            logger.info("Model loaded successfully")
+            model_path = os.path.join("models", "all-MiniLM-L6-v2")
+            if os.path.exists(model_path):
+                self.model = SentenceTransformer(model_path)
+                logger.info("Loaded model from local folder.")
+            else:
+                self.model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+                logger.info("Loaded model from HuggingFace hub.")
             self.load_data(data_path)
             self.prepare_embeddings()
             logger.info("SHLRecommender initialized successfully")
