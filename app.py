@@ -98,9 +98,10 @@ class SHLRecommender:
             if not self.assessments:
                 logger.warning("No assessments available for embedding")
                 return
-                
+            # Use more fields for richer embeddings
             assessment_texts = [
-                f"{assess['name']} {assess['test_type']} {assess['duration']}"
+                f"{assess['name']} {assess['test_type']} {assess['duration']} "
+                f"{assess.get('description', '')} {assess.get('skills', '')}"
                 for assess in self.assessments
             ]
             self.embeddings = self.model.encode(assessment_texts)
@@ -123,7 +124,7 @@ class SHLRecommender:
         query: str, 
         max_duration: Optional[int] = None, 
         max_results: int = 10, 
-        similarity_threshold: float = 0.1  # Lowered threshold for better matching
+        similarity_threshold: float = 0.1  # Lowered threshold for debugging
     ) -> List[Dict]:
         try:
             if self.embeddings is None or len(self.embeddings) == 0:
@@ -145,21 +146,21 @@ class SHLRecommender:
             # Debug logging
             logger.info(f"Query: {query}")
             logger.info(f"Top 5 similarities: {similarities[top_indices[:5]]}")
+            # Print top recommended assessment URLs and their similarity scores
+            for i in range(min(5, len(top_indices))):
+                idx = top_indices[i]
+                logger.info(f"Top {i+1}: {self.assessments[idx]['name']} | {self.assessments[idx]['url']} | Score: {similarities[idx]:.3f}")
             
             results = []
-            
             for idx in top_indices:
                 if len(results) >= max_results:
                     break
-                    
                 assessment = self.assessments[idx]
-                
                 # Check duration if specified
                 if max_duration:
                     duration = self.extract_duration(assessment['duration'])
                     if duration and duration > max_duration:
                         continue
-                
                 # Add to results if similarity meets threshold
                 if similarities[idx] >= similarity_threshold:
                     results.append({
@@ -169,12 +170,10 @@ class SHLRecommender:
                         "adaptive_irt_support": assessment['adaptive_irt_support'],
                         "duration": assessment['duration'],
                         "test_type": assessment['test_type'],
-                        "similarity_score": float(similarities[idx])  # Add similarity score for debugging
+                        "similarity_score": float(similarities[idx])
                     })
-            
             logger.info(f"Results found: {len(results)}")
             return results
-            
         except Exception as e:
             logger.error(f"Error in recommendation: {str(e)}")
             st.error(f"Error getting recommendations: {str(e)}")
@@ -337,8 +336,11 @@ def recommend(request: RecommendationRequest):
     # return results
     pass
 
-# --- Evaluation Pipeline ---
+# --- Utility for URL normalization ---
+def normalize_url(url):
+    return url.lower().strip().rstrip('/') if url else ''
 
+# --- Evaluation Pipeline ---
 test_set = [
     {
         "query": "I am hiring for Java developers who can also collaborate effectively with my business teams. Looking for an assessment(s) that can be completed in 40 minutes.",
@@ -373,9 +375,12 @@ def evaluate_recommender(recommender, test_set, k=3):
     aps = []
     for test in test_set:
         query = test["query"]
-        relevant_urls = set([url.lower().strip().rstrip('/') for url in test["relevant_urls"]])
+        relevant_urls = set([normalize_url(url) for url in test["relevant_urls"]])
         results = recommender.recommend(query, max_results=k)
-        recommended_urls = [r["assessment_url"].lower().strip().rstrip('/') for r in results]
+        recommended_urls = [normalize_url(r["assessment_url"]) for r in results]
+        # Debug print
+        print("Recommended URLs:", recommended_urls)
+        print("Relevant URLs:", relevant_urls)
         recall = recall_at_k(recommended_urls, relevant_urls, k)
         ap = average_precision_at_k(recommended_urls, relevant_urls, k)
         recalls.append(recall)
