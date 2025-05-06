@@ -337,9 +337,27 @@ def recommend(request: RecommendationRequest):
     # return results
     pass
 
+# --- Evaluation Pipeline ---
+
+test_set = [
+    {
+        "query": "I am hiring for Java developers who can also collaborate effectively with my business teams. Looking for an assessment(s) that can be completed in 40 minutes.",
+        "relevant_urls": [
+            "https://www.shl.com/solutions/products/productcatalog/view/automata-fix-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/core-java-entry-level-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/java-8-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/core-java-advanced-level-new/",
+            "https://www.shl.com/solutions/products/productcatalog/view/agile-software-development/",
+            "https://www.shl.com/solutions/products/productcatalog/view/technology-professional-8-0-jobfocused-assessment/",
+            "https://www.shl.com/solutions/products/productcatalog/view/computer-science-new/"
+        ]
+    },
+    # Add more test cases as needed
+]
+
 def recall_at_k(recommended, relevant, k):
     recommended_k = recommended[:k]
-    return len(set(recommended_k) & set(relevant)) / len(relevant)
+    return len(set(recommended_k) & set(relevant)) / len(relevant) if relevant else 0.0
 
 def average_precision_at_k(recommended, relevant, k):
     score = 0.0
@@ -348,9 +366,38 @@ def average_precision_at_k(recommended, relevant, k):
         if rec in relevant:
             num_hits += 1
             score += num_hits / (i + 1)
-    return score / min(len(relevant), k)
+    return score / min(len(relevant), k) if relevant else 0.0
 
-# Loop over test queries, collect metrics, and average
+def evaluate_recommender(recommender, test_set, k=3):
+    recalls = []
+    aps = []
+    for test in test_set:
+        query = test["query"]
+        relevant_urls = set([url.lower().strip().rstrip('/') for url in test["relevant_urls"]])
+        results = recommender.recommend(query, max_results=k)
+        recommended_urls = [r["assessment_url"].lower().strip().rstrip('/') for r in results]
+        recall = recall_at_k(recommended_urls, relevant_urls, k)
+        ap = average_precision_at_k(recommended_urls, relevant_urls, k)
+        recalls.append(recall)
+        aps.append(ap)
+        print(f"Query: {query}\nRecall@{k}: {recall:.2f}, AP@{k}: {ap:.2f}\n")
+    mean_recall = sum(recalls) / len(recalls) if recalls else 0.0
+    map_k = sum(aps) / len(aps) if aps else 0.0
+    print(f"Mean Recall@{k}: {mean_recall:.3f}")
+    print(f"MAP@{k}: {map_k:.3f}")
+    return mean_recall, map_k
+
+# Optionally, add a Streamlit button to run evaluation from the UI
+if 'st' in globals():
+    with st.sidebar:
+        if st.button('Run Evaluation Pipeline'):
+            st.info('Running evaluation...')
+            recommender = get_recommender()
+            if recommender:
+                mean_recall, map_k = evaluate_recommender(recommender, test_set, k=3)
+                st.success(f"Mean Recall@3: {mean_recall:.3f}\nMAP@3: {map_k:.3f}")
+            else:
+                st.error('Recommender not initialized.')
 
 if __name__ == "__main__":
     main() 
